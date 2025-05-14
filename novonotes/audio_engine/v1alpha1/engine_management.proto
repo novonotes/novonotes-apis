@@ -1,0 +1,51 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+message InitializeRequest {
+  // Usually the pid of the application sending this request.
+  string app_instance_id = 1;
+
+  // Should be "v1alpha1"
+  string schema_version = 2;
+}
+
+message InitializeResponse {
+  // Examples:
+  //
+  // "novonotes.audio-engine-library.v1"
+  // "novonotes.audio-engine-service.v2"
+  // "novonotes.beatgen-plugin.v2",
+  // "your-company.awesome-engine.v3"
+  //
+  string engine_type_id = 3;
+
+  // Examples:
+  //
+  // "In-process Audio Engine"
+  // "Out-process Audio Engine"
+  // "My Super Audio Engine"
+  //
+  string display_name = 4;
+
+  // Should be "v1alpha1"
+  string schema_version = 6;
+
+  // Pid of the engine.
+  int32 pid = 7;
+}
+
+message ShutdownRequest {}
+
+message ShutdownResponse {}
+
+// Resets the engine state to the initial state.
+//
+// Only the editing state is reset.
+// The configuration is not reset. (e.g. the output device)
+message ResetStateRequest {}
+
+message ResetStateResponse {}
+
+message PlayTestToneRequest {}
+
+message PlayTestToneResponse {}

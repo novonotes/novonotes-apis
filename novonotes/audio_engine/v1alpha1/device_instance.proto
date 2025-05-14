@@ -1,0 +1,258 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/struct.proto";
+
+// リアルタイムにオーディオ/MIDIを処理するモジュール。
+// 具体的には、ビルトインの音量調整モジュール、パンナー、インストルメント、オーディオエフェクト、VST/AU プラグインのインスタンスなど。
+message DeviceInstance {
+  option (google.api.resource) = {
+    type: "novonotes/audio-engin-api/DeviceInstance"
+    singular: "deviceInstance"
+    plural: "deviceInstances"
+  };
+  // ユーザー指定の id 。
+  // id は全リソースがユニークな値を持つように指定する必要がある。
+  // 重複時は、ALREADY_EXISTS のエラー。
+  string id = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (google.api.field_behavior) = REQUIRED
+  ];
+
+  string device_type_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // このデバイスの内部状態を復元する際に必要なトークン。
+  string state_restoration_token = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  map<string, DeviceParameter> parameters = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  repeated DeviceIo inlets = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  repeated DeviceIo outlets = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message DeviceParameter {
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  string current_value = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  string default_value = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // ParameterSync の際に用いるキー。
+  // パラメーターごとに異なる一意のキーが付与されます。
+  string parameter_sync_key = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  oneof parameter_type {
+    NumericType numeric = 101;
+
+    ChoiceType choice = 102;
+  }
+
+  // Represents parameter type with Integer/Float value.
+  message NumericType {
+    double normalized_current_value = 1 [(google.api.field_behavior) = OPTIONAL];
+
+    double normalized_default_value = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    string min_value = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    string max_value = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    int32 step_count = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Represents parameter type with Bool/Enum value.
+  message ChoiceType {
+    repeated string options = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+}
+
+message DeviceIo {
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message CreateDeviceInstanceRequest {
+  DeviceInstance device_instance = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message CreateDeviceInstanceResponse {
+  DeviceInstance device_instance = 1;
+}
+
+message DeleteDeviceInstanceRequest {
+  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteDeviceInstanceResponse {}
+
+message GetDeviceInstanceRequest {
+  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetDeviceInstanceResponse {
+  DeviceInstance device_instance = 1;
+}
+
+message SubscribeToDeviceInstanceUpdatesRequest {}
+
+// Stream の response。一つの Request に対して、複数回送られる。
+message SubscribeToDeviceInstanceUpdatesResponse {
+  DeviceInstance device_instance = 1;
+}
+
+message RestoreDeviceInstanceStateRequest {
+  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string state_restoration_token = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message RestoreDeviceInstanceStateResponse {
+  DeviceInstance device_instance = 1;
+}
+
+message SetParameterValueRequest {
+  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string parameter_id = 2 [(google.api.field_behavior) = REQUIRED];
+  oneof new_value {
+    string text_value = 3;
+    double normalized_value = 4;
+  }
+}
+
+message SetParameterValueResponse {
+  DeviceInstance device_instance = 1;
+}
+
+message BatchSetParameterValuesRequest {
+  repeated SetParameterValueRequest requests = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message BatchSetParameterValuesResponse {
+  repeated SetParameterValueResponse responses = 1;
+}
+
+message DeviceSpecificCommand {
+  string type = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Struct parameter = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ExecuteDeviceSpecificCommandRequest {
+  // コマンド実行対象の Device Instance の id
+  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
+  DeviceSpecificCommand command = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ExecuteDeviceSpecificCommandResponse {
+  google.protobuf.Struct command_result = 1;
+}
+
+/*
+   以下は ParameterSync の開始から終了までのシーケンス図。
+   AudioMixer のVolume フェーダーのドラッグフェーダーのによってパラメーターを操作するユースケースの例です。
+
+   ```mermaid
+       sequenceDiagram
+        	   autonumber
+       participant User
+       participant App
+       participant Engine
+
+       User->>App: AudioMixer を操作するページへ遷移
+       App->>Engine: StartParameterRequest（セッション ID を送る）
+       Engine->>App: Response
+       App->>User: AudioMixer のページを表示
+
+        		 rect rgba(173, 216, 230, 0.2)
+        	   note over App,Engine: UDP
+       User->>App: フェーダーのドラッグ
+       App->>Engine: Update コマンド（再送処理なし）
+       Engine->>App: RtParameter （UPDATING、変更がない場合も1秒に一回程度定期的に送信）
+       App->>User: フェーダーのインディケーター表示位置を更新
+       User->>App: フェーダーのドラッグ終了
+
+       App->>Engine: Finalize コマンド（ドラッグ終了時など。FINALIZED の state が帰ってこない場合再送）
+       Engine->>App: RtParameter（FINALIZED、変更がない場合も1秒に一回程度定期的に送信）
+       App->>User: フェーダーのインディケーター表示位置を更新
+             end
+       User->>App: AudioMixer のページ外へ遷移
+       App->>Engine: StopParameterSyncRequest
+       Engine->>App: Response
+       App->>User: 別ページを表示
+
+       ```
+*/
+message StartParameterSyncRequest {
+  int32 rt_session_id = 1;
+
+  // 同期を開始したいパラメーターの parameter_sync_key を指定してください。
+  //
+  // DeviceInstance リソースの、parameters.{parameter_id}.parameter_sync_key の値を用いてください。
+  // フォーマットは変更の可能性があります。他のデータを合成して、key を生成しないでください。
+  //
+  // 例:
+  //  "fx324:cutoff"
+  //
+  repeated string parameter_sync_keys = 2;
+}
+
+message StartParameterSyncResponse {}
+
+message StopParameterSyncRequest {
+  int32 rt_session_id = 1;
+  repeated string parameter_sync_keys = 2;
+}
+
+message StopParameterSyncResponse {}
+
+// 10秒間 Update がない場合、自動的に Finalize されます。
+message RtUpdateParameterCommand {
+  string parameter_sync_key = 1;
+  oneof new_value {
+    string text_value = 10;
+    double normalized_value = 11;
+  }
+}
+
+message RtFinalizeParameterCommand {
+  string parameter_sync_key = 1;
+  oneof new_value {
+    string text_value = 10;
+    double normalized_value = 11;
+  }
+}
+
+message RtParameter {
+  string parameter_sync_key = 1;
+
+  // Wrap-around
+  int32 sequence_number = 2;
+
+  // CV Modulation 適用前の値。
+  string text_unmodulated_value = 3;
+
+  // CV Modulation 適用前の値。
+  double normalized_unmodulated_value = 4;
+
+  // CV Modulation 適用後の値。
+  double normalized_modulated_value = 5;
+
+  State state = 10;
+
+  /*
+     ```mermaid
+     stateDiagram-v2
+     [*] --> STATE_FINALIZED : Initial State
+     STATE_FINALIZED --> STATE_UPDATING : Update Command
+     STATE_UPDATING --> STATE_FINALIZED : Finalize Command
+     ```
+  */
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    // 初期状態。
+    STATE_FINALIZED = 1;
+    STATE_UPDATING = 2;
+  }
+}

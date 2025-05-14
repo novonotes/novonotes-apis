@@ -1,0 +1,23 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+import "google/api/resource.proto";
+
+message DeviceDescriptor {
+  option (google.api.resource) = {
+    type: "novonotes-audio-engine/DeviceDescriptor"
+    singular: "deviceDescriptor"
+    plural: "deviceDescriptors"
+  };
+  string device_type_id = 1;
+  string display_name = 2;
+  string plugin_format_name = 3;
+  string manufacturer_name = 5;
+  string version = 6;
+}
+
+message ListDeviceDescriptorsRequest {}
+
+message ListDeviceDescriptorsResponse {
+  repeated DeviceDescriptor device_descriptors = 1;
+}

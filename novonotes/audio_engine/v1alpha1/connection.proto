@@ -1,0 +1,30 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+
+// デバイス、トラック、オーディオIO の間の接続。
+// コネクションの集合によってオーディオ信号やMIDI信号の流れ（オーディオグラフ）が決定する。
+message Connection {
+  oneof source {
+    string src_audio_track_id = 101;
+    string src_device_id = 103;
+  }
+  oneof destination {
+    google.protobuf.Empty dest_audio_output = 201;
+    string dest_device_id = 202;
+  }
+}
+
+message ConnectRequest {
+  Connection connection = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ConnectResponse {}
+
+message DisconnectRequest {
+  Connection connection = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DisconnectResponse {}

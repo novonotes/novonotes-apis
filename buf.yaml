@@ -1,0 +1,14 @@
+version: v2
+lint:
+  except:
+    # This rule often conflicts with the Google AIPs.
+    # For example, both Get and Create methods require their response to be the resource itself. (131,133)
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    # Because we use unified versions across multiple packages, the version number may not always appear in the final segment of the package name.
+    - PACKAGE_VERSION_SUFFIX
+  ignore:
+    - google
+    - novonotes/cmm/v1alpha1/device
+breaking:
+  use:
+    - FILE

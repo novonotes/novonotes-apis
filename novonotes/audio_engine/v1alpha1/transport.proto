@@ -1,0 +1,71 @@
+// プレイバックの開始/停止、再生位置の設定・取得などの操作をするためのAPI。
+
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+import "google/api/field_behavior.proto";
+import "google/protobuf/field_mask.proto";
+
+message Transport {
+  // Tempo in quarter notes per minute (QNPM)。
+  // 120 の場合、1分間に120個の4分音符のスピードで再生。
+  // 4/4 などの 4分音符基準の拍子の場合、BPM と同じ。
+  // 3/8 などの 8分音符基準の拍子の場合、 BPM の 1/2 倍の数値。 （例: BPM=180 と QNPM=90 は同じテンポ）
+  //
+  // 0 と 0以下の値の場合、INVALID_ARGUMENT のエラー。
+  double tempo = 1;
+
+  // 現在の再生位置
+  // Position in quarter note
+  double playhead_position = 2;
+
+  // ループの開始位置
+  // Position in quarter note
+  double loop_start = 3;
+
+  // ループ範囲の長さ
+  // 0 より小さい値の場合、INVALID_ARGUMENT のエラー。
+  // Duration in quarter note
+  double loop_duration = 4;
+}
+
+message UpdateTransportRequest {
+  Transport transport = 1 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateTransportResponse {}
+
+message StartPlaybackRequest {}
+
+message StartPlaybackResponse {}
+
+message StopPlaybackRequest {}
+
+message StopPlaybackResponse {}
+
+// Playhead 位置についてのリアルタイムデータストリームを開始するリクエスト
+// 現在サポートされているのは UDP での送信のみ。
+message StartPlayheadPositionStreamRequest {
+  int32 rt_session_id = 2;
+}
+
+message StartPlayheadPositionStreamResponse {}
+
+message StopPlayheadPositionStreamRequest {
+  int32 rt_session_id = 1;
+}
+
+message StopPlayheadPositionStreamResponse {}
+
+message RtPlayheadPosition {
+  // Wrap-around
+  int32 sequence_number = 1;
+
+  // The current playhead position in quarter notes.
+  double position_ppq = 2;
+  // The current playhead position in seconds.
+  double position_seconds = 3;
+  // The current playhead position in samples.
+  int64 position_samples = 4;
+}
