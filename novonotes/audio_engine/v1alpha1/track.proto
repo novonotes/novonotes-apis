@@ -1,0 +1,48 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
+// オーディオリージョンを配置するタイムライン。
+message Track {
+  option (google.api.resource) = {
+    type: "novonotes/audio-engin-api/Track"
+    singular: "track"
+    plural: "tracks"
+  };
+
+  // ユーザー指定の id
+  // id は全リソースがユニークな値を持つように指定する必要がある。
+  // 重複時は、ALREADY_EXISTS のエラー。
+  string id = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (google.api.field_behavior) = REQUIRED
+  ];
+
+  TrackType type = 2 [(google.api.field_behavior) = REQUIRED];
+
+  enum TrackType {
+    TRACK_TYPE_UNSPECIFIED = 0;
+    TRACK_TYPE_AUDIO = 1;
+    TRACK_TYPE_MIDI = 2;
+  }
+}
+
+message CreateTrackRequest {
+  Track track = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message CreateTrackResponse {}
+
+message UpdateTrackRequest {
+  Track track = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateTrackResponse {}
+
+message DeleteTrackRequest {
+  string track_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteTrackResponse {}

@@ -1,0 +1,63 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
+// 音声データの特定の範囲を表すオブジェクト。
+// トラック上に配置され、開始位置や長さ、ゲイン、フェードイン/フェードアウトなどの情報を持つ。
+message AudioRegion {
+  option (google.api.resource) = {
+    type: "novonotes/audio-engin-api/AudioRegion"
+    singular: "audioRegion"
+    plural: "audioRegions"
+  };
+
+  // ユーザー指定の id
+  // id は全リソースがユニークな値を持つように指定する必要がある。
+  // 重複時は、ALREADY_EXISTS のエラー。
+  string id = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (google.api.field_behavior) = REQUIRED
+  ];
+
+  string parent_id = 2 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.resource_reference) = {type: "novonotes/audio-engine-api/AudioTrack"}
+  ];
+
+  // Must be absolute path
+  string source_file_path = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Position in quarter note
+  double position = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Duration in quarter note
+  /// null の場合は Source File の長さと同じ長さの AudioRegion を作成
+  optional double duration = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Gain in decibel
+  double gain_db = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message CreateAudioRegionRequest {
+  string parent_id = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "novonotes/audio-engine-api/AudioTrack"}
+  ];
+  AudioRegion audio_region = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message CreateAudioRegionResponse {}
+
+message UpdateAudioRegionRequest {
+  AudioRegion audio_region = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateAudioRegionResponse {}
+
+message DeleteAudioRegionRequest {
+  string audio_region_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteAudioRegionResponse {}

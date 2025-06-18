@@ -1,0 +1,16 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+import "google/api/field_behavior.proto";
+
+message DebugStateRequest {}
+
+message DebugStateResponse {
+  string state = 1;
+}
+
+message SaveStateRequest {
+  string dest_file_path = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SaveStateResponse {}

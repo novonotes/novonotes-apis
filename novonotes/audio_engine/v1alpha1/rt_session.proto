@@ -1,0 +1,55 @@
+// RtSession はリアルタイムデータをやりとりするためのセッション。UDP などの専用の転送方法を用いる。
+// RtSession も、NAM のプロトコルを用いるが、開始時のハンドシェイクは行わない。
+// session id は StartRtSessionRequest に含まれる値を用いる。
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha1;
+
+import "novonotes/audio_engine/v1alpha1/device_instance.proto";
+import "novonotes/audio_engine/v1alpha1/transport.proto";
+
+message StartRtSessionRequest {
+  // 例:
+  // `udp://localhost:1234`
+  string state_receiver_uri = 1;
+
+  // RtSession で用いられる session id。RtCommandBatch の送信時等に、NAM の session id として使われる。
+  int32 rt_session_id = 2;
+}
+
+message StartRtSessionResponse {
+  // 例:
+  // `udp://localhost:1234`
+  string command_receiver_uri = 1;
+}
+
+message StopRtSessionRequest {
+  int32 rt_session_id = 3;
+}
+
+message StopRtSessionResponse {}
+
+// RtSession で用いられるメッセージ。command receiver （Engine）へ送られる。
+message RtCommandBatch {
+  repeated Command commands = 1;
+  message Command {
+    oneof type {
+      RtUpdateParameterCommand update_parameter = 100;
+      RtFinalizeParameterCommand finalize_parameter = 101;
+    }
+  }
+}
+
+// RtSession で転送されるメッセージ。Engine から state receiver へ送られる。
+// エンジン内に存在する Entity の状態を伝えるためのメッセージ。
+// 一度に全 Entity が送られるわけではなく、部分集合が送られる。
+// どの Entity の状態が含まれるかは、App 側からのリクエストを元に、
+// １パケットのデータサイズや、状態変更の有無を考慮してエンジン側で決定される。
+message RtStateFragment {
+  repeated EngineEntity entity_subset = 1;
+  message EngineEntity {
+    oneof type {
+      RtParameter parameter = 100;
+      RtPlayheadPosition playhead = 101;
+    }
+  }
+}
