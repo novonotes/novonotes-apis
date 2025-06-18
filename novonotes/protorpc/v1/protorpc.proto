@@ -1,0 +1,126 @@
+// ProtoRPC v1 - Protocol Specification
+//
+// This file defines the ProtoRPC protocol, a Remote Procedure Call (RPC) protocol.
+// While inspired by the JSON-RPC 2.0 Specification as a design reference, ProtoRPC
+// uses Protocol Buffers binary format for efficient data encoding and transport.
+//
+// The primary goal is to provide a language-agnostic, efficient, and strictly-typed
+// RPC framework that leverages the performance advantages of Protocol Buffers.
+//
+// For 'params' and 'result', this protocol uses bytes fields to maintain the
+// efficiency of Protocol Buffers while allowing flexible payload encoding.
+// The 'id' field uses string for simplicity and compatibility.
+//
+// The keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
+// "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in these comments are to
+// be interpreted as described in RFC 2119.
+//
+// JSON-RPC specification: https://www.jsonrpc.org/specification
+
+syntax = "proto3";
+
+// Defines the package for the ProtoRPC specification, version 1.
+package novonotes.protorpc.v1;
+
+import "google/rpc/status.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "ProtorpcProto";
+option java_package = "novonotes.protorpc.v1";
+
+// ===================================================================
+// 1. Request Object
+// ===================================================================
+//
+// A Request object represents a single RPC call. It is sent from a Client to a Server.
+// Every Request MUST include an `id` and expects a Response object.
+message Request {
+  // A String specifying the version of the RPC protocol.
+  // This MUST be exactly "1.0" to adhere to the base specification.
+  string rpc_version = 1;
+
+  // A String containing the name of the method to be invoked.
+  // Method names that begin with "rpc." are reserved for rpc-internal
+  // methods and extensions and MUST NOT be used for application-specific methods.
+  string method = 2;
+
+  // Serialized parameter values for the method call.
+  // This member MAY be omitted. If present, it contains the method parameters
+  // encoded as Protocol Buffers binary data.
+  //
+  // The exact format and structure of the encoded parameters is defined by
+  // the specific method being called and should be documented in the service
+  // definition.
+  bytes params = 3;
+
+  // An identifier established by the Client that MUST be included in every Request.
+  // The Server's Response MUST contain the same value.
+  // This is used to correlate Requests with Responses.
+  //
+  // For responses to invalid requests where the id cannot be determined,
+  // an empty string ("") is used.
+  string id = 4;
+}
+
+// ===================================================================
+// 2. Response Object
+// ===================================================================
+//
+// A Response object is sent from the Server to the Client in reply to every Request.
+message Response {
+  // A String specifying the version of the RPC protocol.
+  // This MUST be exactly "1.0".
+  string rpc_version = 1;
+
+  // A Response object MUST contain either a `result` or an `error` member, but
+  // MUST NOT contain both. This is enforced by the `oneof` construct.
+  oneof result_or_error {
+    // This member is REQUIRED on success.
+    // It MUST NOT exist if there was an error invoking the method.
+    // Contains the method's return value encoded as Protocol Buffers binary data.
+    // The exact format is determined by the method that was invoked.
+    bytes result = 2;
+
+    // This member is REQUIRED on error.
+    // It MUST NOT exist if there was no error.
+    // Uses the standard google.rpc.Status for error representation.
+    google.rpc.Status error = 3;
+  }
+
+  // This member is REQUIRED for every Response.
+  // It MUST be the same value as the `id` in the corresponding Request object.
+  //
+  // If there was an error in detecting the `id` in the Request
+  // (e.g., a Parse Error or an Invalid Request), this `id` MUST be an empty string ("").
+  string id = 4;
+}
+
+// ===================================================================
+// 3. Batch Calls
+// ===================================================================
+//
+// To send several Request objects at once, the Client MAY send a `BatchRequest`.
+// This is an atomic operation from the perspective of the Client.
+message BatchRequest {
+  // A list of `Request` objects to be processed by the server.
+  // An empty list is a valid `BatchRequest`, but the server's response behavior
+  // for it might be to return a single `Response` with an "Invalid Request" error.
+  repeated Request requests = 1;
+}
+
+// The Server's response to a `BatchRequest`.
+message BatchResponse {
+  // A list of `Response` objects corresponding to the `Request` objects in the
+  // `BatchRequest`.
+  //
+  // - There MUST be a `Response` for every `Request` in the batch.
+  // - The Server MAY process the batch of requests concurrently and in any order.
+  // - Therefore, the order of `Response` objects in this list is NOT guaranteed
+  //   to correspond to the order of `Request` objects in the `BatchRequest`.
+  // - The Client MUST use the `id` field to correlate responses with their requests.
+  //
+  // Note: If the batch call itself is malformed in a way that it cannot be parsed as
+  // a `BatchRequest` (e.g., a top-level parsing error), the Server MUST reply with
+  // a single `Response` object containing a `Parse error`, not a `BatchResponse`.
+  repeated Response responses = 1;
+}
