@@ -1,6 +1,6 @@
 ---
 - included_paths:
-    - "novonotes/audio_engine/**/*.proto"
+    - "novonotes/audio_engine/v1alpha1/**/*.proto"
   disabled_rules:
     - core
     - client-libraries

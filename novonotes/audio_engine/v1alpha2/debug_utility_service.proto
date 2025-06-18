@@ -1,0 +1,25 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha2;
+
+import "google/api/field_behavior.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "DebugUtilityServiceProto";
+option java_package = "novonotes.audio_engine.v1alpha2";
+
+service DebugUtilityService {
+  rpc DebugState(DebugStateRequest) returns (DebugStateResponse) {}
+  rpc SaveState(SaveStateRequest) returns (SaveStateResponse) {}
+}
+
+message DebugStateRequest {}
+
+message DebugStateResponse {
+  string state = 1;
+}
+
+message SaveStateRequest {
+  string dest_file_path = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message SaveStateResponse {}

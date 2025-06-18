@@ -1,0 +1,82 @@
+syntax = "proto3";
+package novonotes.audio_engine.v1alpha2;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "DeviceInstanceProto";
+option java_package = "novonotes.audio_engine.v1alpha2";
+
+// リアルタイムにオーディオ/MIDIを処理するモジュール。
+// 具体的には、ビルトインの音量調整モジュール、パンナー、インストルメント、オーディオエフェクト、VST/AU プラグインのインスタンスなど。
+message DeviceInstance {
+  option (google.api.resource) = {
+    type: "audio-engine-api.novonotes.com/DeviceInstance"
+    singular: "deviceInstance"
+    plural: "deviceInstances"
+    pattern: "deviceInstances/{device_instance}"
+  };
+
+  // ユーザー指定の id は int32 で指定する。
+  // id は全リソースがユニークな値を持つように指定する必要がある。
+  // 重複時は、ALREADY_EXISTS のエラーを返す。
+  //
+  // Format: deviceInstances/{device_instance}
+  // Example: deviceInstances/13523
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  string device_type_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // このデバイスの内部状態を復元する際に必要なトークン。
+  string state_restoration_token = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  map<string, DeviceParameter> parameters = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  repeated AudioPort audio_inputs = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  repeated AudioPort audio_outputs = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message DeviceParameter {
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  string current_value = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  string default_value = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // ParameterSync の際に用いるキー。
+  // パラメーターごとに異なる一意のキーが付与されます。
+  string parameter_sync_key = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  oneof parameter_type {
+    NumericType numeric = 101;
+
+    ChoiceType choice = 102;
+  }
+
+  // Represents parameter type with Integer/Float value.
+  message NumericType {
+    double normalized_current_value = 1 [(google.api.field_behavior) = OPTIONAL];
+
+    double normalized_default_value = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    string min_value = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    string max_value = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    int32 step_count = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Represents parameter type with Bool/Enum value.
+  message ChoiceType {
+    repeated string options = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+}
+
+message AudioPort {
+  string display_name = 2;
+  int32 channels = 3;
+}
