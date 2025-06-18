@@ -1,2 +1,3 @@
 # novonotes-apis
-Public interface definitions for NovoNotes products
+
+Public API definitions for the NovoNotes ecosystem.

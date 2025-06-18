@@ -2,7 +2,7 @@
 
 AudioEngine をコントロールするための message のプロトコル。
 
-[audio-engine-api.md](../../../AudioEngine/doc/audio-engine-api.md) 参照。
+[audio-engine-api.md](https://github.com/novonotes/audio-engine/blob/release/v0.1.0/doc/ja/audio-engine-api.md) 参照。
 
 ## 命名規則
 
@@ -20,7 +20,7 @@ Subscribe で始まるリクエストはイベント購読リクエストを表�
 ### 3. Rt
 
 Rt で始まるメッセージは Realtime データを表す。基本的には UDP などの専用の転送方式を用いる。
-これらのメッセージ転送には [RtSession](./v1alpha1/rt_session.proto) を使う。
+これらのメッセージ転送には [RtSession](./rt_session.proto) を使う。
 
 ## デザイン
 
