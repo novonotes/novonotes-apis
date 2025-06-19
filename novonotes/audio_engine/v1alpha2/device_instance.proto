@@ -12,7 +12,7 @@ option java_package = "novonotes.audio_engine.v1alpha2";
 // 具体的には、ビルトインの音量調整モジュール、パンナー、インストルメント、オーディオエフェクト、VST/AU プラグインのインスタンスなど。
 message DeviceInstance {
   option (google.api.resource) = {
-    type: "audio-engine-api.novonotes.com/DeviceInstance"
+    type: "audio-engine-api.novonotes/DeviceInstance"
     singular: "deviceInstance"
     plural: "deviceInstances"
     pattern: "deviceInstances/{device_instance}"
@@ -77,6 +77,6 @@ message DeviceParameter {
 }
 
 message AudioPort {
-  string display_name = 2;
-  int32 channels = 3;
+  string display_name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 channels = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

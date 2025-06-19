@@ -1,8 +1,10 @@
 syntax = "proto3";
 package novonotes.audio_engine.v1alpha2;
 
+import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
 import "google/protobuf/struct.proto";
 import "novonotes/audio_engine/v1alpha2/device_instance.proto";
 
@@ -11,11 +13,31 @@ option java_outer_classname = "DeviceInstanceServiceProto";
 option java_package = "novonotes.audio_engine.v1alpha2";
 
 service DeviceInstanceService {
-  rpc CreateDeviceInstance(CreateDeviceInstanceRequest) returns (CreateDeviceInstanceResponse) {}
-  rpc DeleteDeviceInstance(DeleteDeviceInstanceRequest) returns (DeleteDeviceInstanceResponse) {}
-  rpc GetDeviceInstance(GetDeviceInstanceRequest) returns (GetDeviceInstanceResponse) {}
-  rpc SubscribeToDeviceInstanceUpdates(SubscribeToDeviceInstanceUpdatesRequest) returns (stream SubscribeToDeviceInstanceUpdatesResponse) {}
+  rpc CreateDeviceInstance(CreateDeviceInstanceRequest) returns (CreateDeviceInstanceResponse) {
+    // (-- api-linter: core::0133::method-signature=disabled
+    //  aip.dev/not-precedent: There is no `parent` field because
+    //  this resource is a top-level resource. --)
+    option (google.api.method_signature) = "device_instance";
+  }
+  rpc DeleteDeviceInstance(DeleteDeviceInstanceRequest) returns (DeleteDeviceInstanceResponse) {
+    option (google.api.method_signature) = "name";
+  }
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  // Prioritizing the rule from
+  // https://linter.aip.dev/131/response-message-name
+  rpc GetDeviceInstance(GetDeviceInstanceRequest) returns (DeviceInstance) {
+    option (google.api.method_signature) = "name";
+  }
+  rpc ListDeviceInstances(ListDeviceInstancesRequest) returns (ListDeviceInstancesResponse) {
+    option (google.api.method_signature) = "parent";
+  }
+  rpc WatchDeviceInstances(WatchDeviceInstancesRequest) returns (stream WatchDeviceInstancesResponse) {}
+
   rpc RestoreDeviceInstanceState(RestoreDeviceInstanceStateRequest) returns (RestoreDeviceInstanceStateResponse) {}
+
+  rpc ExecuteDeviceSpecificCommand(ExecuteDeviceSpecificCommandRequest) returns (ExecuteDeviceSpecificCommandResponse) {
+    option (google.api.method_signature) = "device_instance_id,command";
+  }
 }
 
 message CreateDeviceInstanceRequest {
@@ -27,54 +49,75 @@ message CreateDeviceInstanceResponse {
 }
 
 message DeleteDeviceInstanceRequest {
-  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "audio-engine-api.novonotes/DeviceInstance"}
+  ];
 }
 
 message DeleteDeviceInstanceResponse {}
 
 message GetDeviceInstanceRequest {
-  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "audio-engine-api.novonotes/DeviceInstance"}
+  ];
 }
 
 message GetDeviceInstanceResponse {
   DeviceInstance device_instance = 1;
 }
 
-message SubscribeToDeviceInstanceUpdatesRequest {}
+message ListDeviceInstancesRequest {}
 
-// Stream の response。一つの Request に対して、複数回送られる。
-message SubscribeToDeviceInstanceUpdatesResponse {
+message ListDeviceInstancesResponse {
+  repeated DeviceInstance device_instances = 1;
+}
+
+// Receive a stream of DeviceInstance changes.
+message WatchDeviceInstancesRequest {
+  // Specify the resource name of the DeviceInstance to monitor.
+  //
+  // Format: deviceInstances/{device_instance}
+  // Example:
+  // "deviceInstances/6e3fab17-32f6-4c38-897e-43aa544f45f1"
+  //
+  // Wildcard '*' can be used to monitor all devices.
+  // Example: 'deviceInstances/*'
+  repeated string names = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "audio-engine-api.novonotes/DeviceInstance"}
+  ];
+
+  // The amount of time to buffer events at the server before
+  // being returned to prevent responses at excessive frequency.
+  // Valid values are between 0-60000 milliseconds.
+  // If this field is omitted, it defaults to 300
+  // milliseconds.
+  optional google.protobuf.Duration buffer_window = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message WatchDeviceInstancesResponse {
+  // List of changes.
+  repeated DeviceInstanceChange changes = 1;
+}
+
+// Contains the change and its type.
+message DeviceInstanceChange {
   DeviceInstance device_instance = 1;
+  DeviceInstanceChangeType change_type = 2;
 }
 
 message RestoreDeviceInstanceStateRequest {
-  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "audio-engine-api.novonotes/DeviceInstance"}
+  ];
   string state_restoration_token = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message RestoreDeviceInstanceStateResponse {
   DeviceInstance device_instance = 1;
-}
-
-message SetParameterValueRequest {
-  string device_instance_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string parameter_id = 2 [(google.api.field_behavior) = REQUIRED];
-  oneof new_value {
-    string text_value = 3;
-    double normalized_value = 4;
-  }
-}
-
-message SetParameterValueResponse {
-  DeviceInstance device_instance = 1;
-}
-
-message BatchSetParameterValuesRequest {
-  repeated SetParameterValueRequest requests = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-message BatchSetParameterValuesResponse {
-  repeated SetParameterValueResponse responses = 1;
 }
 
 message DeviceSpecificCommand {
@@ -90,4 +133,14 @@ message ExecuteDeviceSpecificCommandRequest {
 
 message ExecuteDeviceSpecificCommandResponse {
   google.protobuf.Struct command_result = 1;
+}
+
+enum DeviceInstanceChangeType {
+  DEVICE_INSTANCE_CHANGE_TYPE_UNSPECIFIED = 0;
+
+  DEVICE_INSTANCE_CHANGE_TYPE_CREATED = 1;
+
+  DEVICE_INSTANCE_CHANGE_TYPE_UPDATED = 2;
+
+  DEVICE_INSTANCE_CHANGE_TYPE_DELETED = 3;
 }

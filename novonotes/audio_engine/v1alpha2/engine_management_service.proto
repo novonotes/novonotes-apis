@@ -4,7 +4,7 @@ package novonotes.audio_engine.v1alpha2;
 import "google/api/field_behavior.proto";
 
 option java_multiple_files = true;
-option java_outer_classname = "EngineManagementProto";
+option java_outer_classname = "EngineManagementServiceProto";
 option java_package = "novonotes.audio_engine.v1alpha2";
 
 service EngineManagementService {
