@@ -40,8 +40,9 @@ message Request {
   string rpc_version = 1;
 
   // A String containing the name of the method to be invoked.
-  // Method names that begin with "rpc." are reserved for rpc-internal
-  // methods and extensions and MUST NOT be used for application-specific methods.
+  //
+  // Method names SHOULD follow the format: /<package>.<service>/<method>
+  // For example: "/novonotes.audio_engine.v1alpha1.DeviceInstanceService/GetDeviceInstance"
   string method = 2;
 
   // Serialized parameter values for the method call.
@@ -100,11 +101,12 @@ message Response {
 // ===================================================================
 //
 // To send several Request objects at once, the Client MAY send a `BatchRequest`.
-// This is an atomic operation from the perspective of the Client.
+// The Server MAY process a batch rpc call as a set of concurrent tasks,
+// processing them in any order and with any width of parallelism.
 message BatchRequest {
   // A list of `Request` objects to be processed by the server.
-  // An empty list is a valid `BatchRequest`, but the server's response behavior
-  // for it might be to return a single `Response` with an "Invalid Request" error.
+  // If the list is empty, the server MUST return a BatchResponse containing
+  // a single Response with an "Invalid Request" error.
   repeated Request requests = 1;
 }
 
@@ -115,12 +117,11 @@ message BatchResponse {
   //
   // - There MUST be a `Response` for every `Request` in the batch.
   // - The Server MAY process the batch of requests concurrently and in any order.
-  // - Therefore, the order of `Response` objects in this list is NOT guaranteed
-  //   to correspond to the order of `Request` objects in the `BatchRequest`.
+  // - The Response objects MAY be returned in any order within the list.
   // - The Client MUST use the `id` field to correlate responses with their requests.
   //
-  // Note: If the batch call itself is malformed in a way that it cannot be parsed as
-  // a `BatchRequest` (e.g., a top-level parsing error), the Server MUST reply with
-  // a single `Response` object containing a `Parse error`, not a `BatchResponse`.
+  // Note: The Server MUST always reply with a `BatchResponse` for a `BatchRequest`,
+  // even if the batch is empty or contains invalid requests. In such cases, the
+  // `BatchResponse` will contain appropriate error responses.
   repeated Response responses = 1;
 }
